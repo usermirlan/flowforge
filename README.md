@@ -4,6 +4,10 @@
 
 [English version](README.en.md)
 
+**Жандуу демо:** https://flowforge-pied.vercel.app · API: https://flowforge-api-lj7j.onrender.com/docs
+
+> Backend Render'дин акысыз планында: 15 мүнөт колдонулбаса уктап калат, биринчи ачылышы ~1 мүнөт алышы мүмкүн.
+
 ![Редактор: иштетүү учурунда ар бир блоктун абалы тирүү көрүнөт](docs/screenshots/editor-run.jpg)
 
 ## Мүмкүнчүлүктөр

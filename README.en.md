@@ -2,6 +2,10 @@
 
 **A visual workflow automation platform** — a mini n8n / Zapier. Connect blocks on a canvas to build automations without code: an event arrives (webhook, cron or manual), data is processed (HTTP, conditions, AI), and the result goes where it's needed (Telegram, any API).
 
+**Live demo:** https://flowforge-pied.vercel.app · API: https://flowforge-api-lj7j.onrender.com/docs
+
+> The backend runs on Render's free plan and sleeps after 15 min idle; the first request may take ~1 minute.
+
 ![Editor: each block lights up live while a run executes](docs/screenshots/editor-run.jpg)
 
 ## Features
