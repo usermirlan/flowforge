@@ -1,0 +1,36 @@
+# Render Blueprint: one free web service (API + Celery worker + beat via ROLE=all)
+# and a free internal Key Value (Redis) instance. Postgres comes from Neon.
+services:
+  - type: keyvalue
+    name: flowforge-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: []          # reachable only from Render services
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: flowforge-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: ROLE
+        value: all
+      - key: DATABASE_URL
+        sync: false            # paste the Neon connection string in the dashboard
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: flowforge-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PUBLIC_API_URL
+        sync: false            # https://<this-service>.onrender.com
+      - key: CORS_ORIGINS
+        sync: false            # https://<your-app>.vercel.app
+      - key: LLM_API_KEY
+        sync: false            # optional: Groq key for the AI block

@@ -75,7 +75,7 @@ cd frontend && npm install && npm run dev
 
 ## Жайгаштыруу
 
-Render'дин акысыз планына бир контейнер жетиштүү: `ROLE=all` API'ни, worker'ди жана beat'ти бир процессте иштетет. БД — Neon, Redis — Upstash же Render Key Value, frontend — Vercel (`API_URL`, `PUBLIC_API_URL`).
+Render'дин акысыз планына бир контейнер жетиштүү: `ROLE=all` API'ни, worker'ди жана beat'ти бир процессте иштетет. БД — Neon, Redis — Render Key Value (`render.yaml` экөөнү тең түзөт), frontend — Vercel (`API_URL`, `PUBLIC_API_URL`).
 
 ## Скриншоттор
 

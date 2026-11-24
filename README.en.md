@@ -32,4 +32,4 @@ Tests: `cd backend && pytest -q`
 
 ## Deploy
 
-One container on Render's free plan with `ROLE=all` (API + worker + beat), Neon for Postgres, Upstash or Render Key Value for Redis, Vercel for the frontend.
+One container on Render's free plan with `ROLE=all` (API + worker + beat), Neon for Postgres, Render Key Value for Redis (both defined in `render.yaml`), Vercel for the frontend.

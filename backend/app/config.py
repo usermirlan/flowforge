@@ -7,8 +7,16 @@ def _bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).lower() in ("1", "true", "yes")
 
 
+def _db_url(url: str) -> str:
+    """Hosted Postgres (Neon, Render) hands out postgres:// URLs; use the psycopg 3 driver."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 class Settings:
-    database_url: str = os.environ.get("DATABASE_URL", "postgresql+psycopg://flowforge:flowforge@localhost:5432/flowforge")
+    database_url: str = _db_url(os.environ.get("DATABASE_URL", "postgresql+psycopg://flowforge:flowforge@localhost:5432/flowforge"))
     redis_url: str = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
     secret_key: str = os.environ.get("SECRET_KEY", "dev-only-change-me")
     # Fernet key for credentials at rest; derived from SECRET_KEY when not set
