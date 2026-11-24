@@ -44,8 +44,8 @@ cp .env.example .env        # SECRET_KEY'ди өзгөртүңүз
 docker compose up --build
 ```
 
-- Сайт: http://localhost:3000
-- API документация: http://localhost:8000/docs
+- Сайт: http://localhost:3100
+- API документация: http://localhost:8100/docs
 
 Катталып, даяр үлгүлөрдүн бирин ачып, **▶ Иштетүү** басыңыз.
 
@@ -54,7 +54,7 @@ docker compose up --build
 Workflow'ду активдештирип, webhook блогундагы URL'ди көчүрүңүз:
 
 ```bash
-curl -X POST http://localhost:8000/api/hooks/<token> \
+curl -X POST http://localhost:8100/api/hooks/<token> \
   -H "Content-Type: application/json" -d '{"id": 42, "total": 9000}'
 ```
 

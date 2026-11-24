@@ -26,7 +26,7 @@ cp .env.example .env    # set SECRET_KEY
 docker compose up --build
 ```
 
-App: http://localhost:3000 · API docs: http://localhost:8000/docs
+App: http://localhost:3100 · API docs: http://localhost:8100/docs
 
 Tests: `cd backend && pytest -q`
 

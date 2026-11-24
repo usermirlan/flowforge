@@ -1,4 +1,4 @@
-# Local stack: docker compose up --build  →  http://localhost:3000
+# Local stack: docker compose up --build  →  http://localhost:3100
 x-backend: &backend
   build: ./backend
   env_file:
@@ -31,17 +31,17 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://flowforge:flowforge@db:5432/flowforge
       REDIS_URL: redis://redis:6379/0
-      PUBLIC_API_URL: http://localhost:8000
-      CORS_ORIGINS: http://localhost:3000
+      PUBLIC_API_URL: http://localhost:8100
+      CORS_ORIGINS: http://localhost:3100
       ROLE: api
-    ports: ["8000:8000"]
+    ports: ["8100:8000"]
 
   worker:
     <<: *backend
     environment:
       DATABASE_URL: postgresql+psycopg://flowforge:flowforge@db:5432/flowforge
       REDIS_URL: redis://redis:6379/0
-      PUBLIC_API_URL: http://localhost:8000
+      PUBLIC_API_URL: http://localhost:8100
       ROLE: worker
     depends_on: [api]
 
@@ -57,8 +57,8 @@ services:
     build: ./frontend
     environment:
       API_URL: http://api:8000
-      PUBLIC_API_URL: http://localhost:8000
-    ports: ["3000:3000"]
+      PUBLIC_API_URL: http://localhost:8100
+    ports: ["3100:3000"]
     depends_on: [api]
     restart: unless-stopped
 
