@@ -4,9 +4,8 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { memo } from "react";
 import { GROUP_COLOR, TYPE_ICON, groupOf } from "@/lib/nodeStyle";
 import type { FlowNodeData } from "@/lib/types";
+import { useI18n } from "../I18n";
 import { useNodeStatus, useSpec } from "./status";
-
-const HANDLE_LABEL: Record<string, string> = { true: "ооба", false: "жок" };
 
 function summary(type: string, p: Record<string, unknown>): string {
   switch (type) {
@@ -29,6 +28,7 @@ function summary(type: string, p: Record<string, unknown>): string {
 function FlowNode({ id, type, data, selected }: NodeProps & { data: FlowNodeData }) {
   const spec = useSpec(type);
   const step = useNodeStatus(id);
+  const { d } = useI18n();
   const color = GROUP_COLOR[groupOf(type)];
   const isTrigger = type.startsWith("trigger.");
   const handles = spec?.handles;
@@ -60,7 +60,7 @@ function FlowNode({ id, type, data, selected }: NodeProps & { data: FlowNodeData
       </div>
       {sub && <div className="truncate border-t border-line px-3 py-1.5 font-mono text-[11px] text-dim">{sub}</div>}
       {step?.duration_ms != null && step.status !== "running" && (
-        <div className="border-t border-line px-3 py-1 text-[10.5px] text-dim">{step.duration_ms} мс</div>
+        <div className="border-t border-line px-3 py-1 text-[10.5px] text-dim">{step.duration_ms} {d.editor.ms}</div>
       )}
       {handles ? (
         handles.map((h, i) => (
@@ -68,7 +68,7 @@ function FlowNode({ id, type, data, selected }: NodeProps & { data: FlowNodeData
             <Handle id={h} type="source" position={Position.Right} style={{ top: `${((i + 1) / (handles.length + 1)) * 100}%` }} />
             <span className="pointer-events-none absolute -right-11 text-[10.5px] text-dim"
               style={{ top: `calc(${((i + 1) / (handles.length + 1)) * 100}% - 8px)` }}>
-              {HANDLE_LABEL[h] ?? h}
+              {d.handles[h] ?? h}
             </span>
           </div>
         ))

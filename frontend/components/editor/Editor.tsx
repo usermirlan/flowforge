@@ -10,7 +10,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { deleteWorkflow, listExecutions, saveWorkflow, setActive } from "@/app/actions";
 import { ago } from "@/lib/format";
-import { GROUP_COLOR, GROUP_LABEL, TYPE_ICON } from "@/lib/nodeStyle";
+import { GROUP_COLOR, GROUP_ORDER, TYPE_ICON } from "@/lib/nodeStyle";
+import { useI18n } from "../I18n";
 import type { Catalog, Credential, Execution, FlowNodeData, Graph, NodeSpec, Workflow } from "@/lib/types";
 import StatusDot from "../StatusDot";
 import ConfigPanel from "./ConfigPanel";
@@ -35,15 +36,16 @@ function toGraph(nodes: FNode[], edges: Edge[]): Graph {
 }
 
 function Palette({ specs, onAdd }: { specs: NodeSpec[]; onAdd: (type: string) => void }) {
-  const groups = (Object.keys(GROUP_LABEL) as NodeSpec["group"][])
+  const { d } = useI18n();
+  const groups = GROUP_ORDER
     .map((g) => [g, specs.filter((s) => s.group === g)] as const)
     .filter(([, list]) => list.length);
   return (
     <aside className="hidden w-60 shrink-0 flex-col gap-5 overflow-y-auto border-r border-line bg-surface p-4 md:flex">
-      <p className="text-xs text-dim">Сүйрөп таштаңыз же басыңыз</p>
+      <p className="text-xs text-dim">{d.editor.palette}</p>
       {groups.map(([g, list]) => (
         <div key={g} className="flex flex-col gap-1.5">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: GROUP_COLOR[g] }}>{GROUP_LABEL[g]}</h3>
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: GROUP_COLOR[g] }}>{d.groups[g]}</h3>
           {list.map((s) => (
             <button
               key={s.type}
@@ -70,12 +72,13 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
   const [nodes, setNodes, onNodesChange] = useNodesState<FNode>(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initial.edges);
   const [name, setName] = useState(wf.name);
+  const { d } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "bad"; text: string } | null>(null);
   const [saving, startSave] = useTransition();
   const [tab, setTab] = useState<"run" | "history" | null>(null);
-  const [payload, setPayload] = useState('{\n  "name": "Айбек"\n}');
+  const [payload, setPayload] = useState(d.editor.samplePayload);
   const [history, setHistory] = useState<Execution[]>([]);
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { run, start, show, clear } = useRun(wf.id, wsBase);
@@ -106,7 +109,7 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
     const spec = specs[type];
     if (!spec) return;
     if (type.startsWith("trigger.") && nodes.some((n) => n.type?.startsWith("trigger."))) {
-      setMsg({ kind: "bad", text: "Workflow'до бир гана триггер болот — алгач эскисин өчүрүңүз." });
+      setMsg({ kind: "bad", text: d.editor.oneTrigger });
       return;
     }
     const id = nextNodeId(type, new Set(nodes.map((n) => n.id)));
@@ -129,13 +132,13 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
   };
 
   const save = useCallback(async (): Promise<boolean> => {
-    const r = await saveWorkflow(wf.id, name.trim() || "Аталышсыз", wf.description, toGraph(nodes, edges));
+    const r = await saveWorkflow(wf.id, name.trim() || d.editor.untitled, wf.description, toGraph(nodes, edges));
     if (!r.ok) { setMsg({ kind: "bad", text: r.error }); return false; }
     setWf(r.data);
     setDirty(false);
-    setMsg(r.data.problems.length ? { kind: "bad", text: r.data.problems.join(" · ") } : { kind: "ok", text: "Сакталды" });
+    setMsg(r.data.problems.length ? { kind: "bad", text: r.data.problems.join(" · ") } : { kind: "ok", text: d.editor.saved });
     return true;
-  }, [wf.id, wf.description, name, nodes, edges]);
+  }, [wf.id, wf.description, name, nodes, edges, d]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -154,7 +157,7 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
   const doRun = () => startSave(async () => {
     let body: Record<string, unknown> = {};
     if (payload.trim()) {
-      try { body = JSON.parse(payload); } catch { setMsg({ kind: "bad", text: "Киргизүү JSON туура эмес" }); return; }
+      try { body = JSON.parse(payload); } catch { setMsg({ kind: "bad", text: d.editor.badPayload }); return; }
     }
     // a manual test of a webhook flow should look like a real request
     if (triggerType === "trigger.webhook") body = { body, query: {}, headers: {} };
@@ -167,7 +170,7 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
   const toggleActive = () => startSave(async () => {
     if (dirty && !(await save())) return;
     const r = await setActive(wf.id, !wf.is_active);
-    if (r.ok) { setWf(r.data); setMsg({ kind: "ok", text: r.data.is_active ? "Активдештирилди" : "Токтотулду" }); }
+    if (r.ok) { setWf(r.data); setMsg({ kind: "ok", text: r.data.is_active ? d.editor.activated : d.editor.stopped }); }
     else setMsg({ kind: "bad", text: r.error });
   });
 
@@ -205,28 +208,28 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
         <div className="flex h-[calc(100dvh-3.5rem)] flex-col">
           {/* toolbar */}
           <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2">
-            <Link href="/workflows" className="rounded p-1.5 text-dim hover:bg-raised hover:text-fg" aria-label="Артка">←</Link>
+            <Link href="/workflows" className="rounded p-1.5 text-dim hover:bg-raised hover:text-fg" aria-label={d.editor.back}>←</Link>
             <input
-              aria-label="Workflow'дун аты"
+              aria-label={d.editor.name}
               value={name}
               onChange={(e) => { setName(e.target.value); setDirty(true); }}
               className="min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 font-medium outline-none hover:bg-raised focus:bg-raised sm:max-w-sm"
             />
-            {dirty && <span className="text-xs text-dim">● сакталган жок</span>}
+            {dirty && <span className="text-xs text-dim">{d.editor.unsaved}</span>}
             {msg && <span role="status" className={`max-w-md truncate text-xs ${msg.kind === "ok" ? "text-ok" : "text-bad"}`} title={msg.text}>{msg.text}</span>}
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <button onClick={openHistory} className={btn}>Тарых</button>
-              <button onClick={() => startSave(async () => { await save(); })} disabled={saving} className={btn}>Сактоо</button>
+              <button onClick={openHistory} className={btn}>{d.editor.history}</button>
+              <button onClick={() => startSave(async () => { await save(); })} disabled={saving} className={btn}>{d.editor.save}</button>
               {triggerType && triggerType !== "trigger.manual" && (
                 <button onClick={toggleActive} disabled={saving}
                   className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${wf.is_active ? "border-ok/50 text-ok" : "border-line"} hover:bg-raised`}>
                   <span className={`h-2 w-2 rounded-full ${wf.is_active ? "bg-ok" : "bg-dim"}`} />
-                  {wf.is_active ? "Активдүү" : "Активдештирүү"}
+                  {wf.is_active ? d.editor.active : d.editor.activate}
                 </button>
               )}
               <button onClick={() => setTab(tab === "run" ? null : "run")} disabled={!runnable}
                 className="rounded-lg bg-accent px-3.5 py-1.5 text-sm font-medium text-white hover:brightness-110 disabled:opacity-50">
-                ▶ Иштетүү
+                {d.editor.run}
               </button>
             </div>
           </div>
@@ -254,34 +257,34 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
                 <MiniMap pannable zoomable nodeColor="#2a2f3b" maskColor="rgba(10,11,15,.7)" className="!hidden lg:!block" />
               </ReactFlow>
               {nodes.length === 0 && (
-                <div className="pointer-events-none absolute inset-0 grid place-items-center text-dim">Сол жактан триггер кошуудан баштаңыз</div>
+                <div className="pointer-events-none absolute inset-0 grid place-items-center text-dim">{d.editor.emptyCanvas}</div>
               )}
 
               {/* bottom drawer: run / history */}
               {tab && (
                 <div className="absolute inset-x-3 bottom-3 z-10 max-h-[45%] overflow-hidden rounded-xl border border-line bg-surface shadow-2xl shadow-black/50">
                   <div className="flex items-center justify-between border-b border-line px-4 py-2">
-                    <span className="text-sm font-medium">{tab === "run" ? "Иштетүү" : "Иштетүүлөр тарыхы"}</span>
-                    <button onClick={() => setTab(null)} aria-label="Жабуу" className="text-dim hover:text-fg">✕</button>
+                    <span className="text-sm font-medium">{tab === "run" ? d.editor.runTitle : d.editor.historyTitle}</span>
+                    <button onClick={() => setTab(null)} aria-label={d.editor.close} className="text-dim hover:text-fg">✕</button>
                   </div>
                   {tab === "run" ? (
                     <div className="grid gap-4 overflow-y-auto p-4 md:grid-cols-[1fr_1.4fr]" style={{ maxHeight: "calc(45vh - 3rem)" }}>
                       <div className="flex flex-col gap-2">
                         <label className="text-xs text-dim" htmlFor="payload">
-                          Киргизүү (JSON) — {triggerType === "trigger.webhook" ? "webhook'тун body'си катары" : "триггердин маалыматы"}
+                          {triggerType === "trigger.webhook" ? d.editor.payloadWebhook : d.editor.payloadTrigger}
                         </label>
                         <textarea id="payload" value={payload} onChange={(e) => setPayload(e.target.value)} rows={6} spellCheck={false}
                           className="rounded-lg border border-line bg-bg p-2.5 font-mono text-xs outline-none focus:border-accent" />
                         <button onClick={doRun} disabled={saving || run.status === "running" || run.status === "queued"}
                           className="rounded-lg bg-accent py-2 text-sm font-medium text-white hover:brightness-110 disabled:opacity-50">
-                          {run.status === "running" || run.status === "queued" ? "Иштеп жатат…" : "▶ Азыр иштетүү"}
+                          {run.status === "running" || run.status === "queued" ? d.editor.running : d.editor.runNow}
                         </button>
                       </div>
                       <div className="flex min-w-0 flex-col gap-2 text-sm">
                         <div className="flex items-center gap-3">
                           <StatusDot status={run.status} />
                           {run.executionId && <span className="truncate font-mono text-xs text-dim">{run.executionId.slice(0, 8)}</span>}
-                          {run.status && <button onClick={clear} className="ml-auto text-xs text-dim hover:text-fg">тазалоо</button>}
+                          {run.status && <button onClick={clear} className="ml-auto text-xs text-dim hover:text-fg">{d.editor.clear}</button>}
                         </div>
                         {run.error && <p className="rounded-lg border border-bad/40 bg-bad/10 p-2.5 text-xs text-bad">{run.error}</p>}
                         {Object.values(run.steps).map((s) => (
@@ -289,16 +292,16 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
                             className="flex items-center justify-between gap-3 rounded-lg border border-line bg-bg px-3 py-2 text-left hover:border-accent/60">
                             <span className="truncate font-mono text-xs">{s.node_id}</span>
                             <span className={`text-xs ${s.status === "error" ? "text-bad" : s.status === "success" ? "text-ok" : "text-dim"}`}>
-                              {s.status}{s.duration_ms != null && s.status !== "running" ? ` · ${s.duration_ms} мс` : ""}
+                              {d.status[s.status] ?? s.status}{s.duration_ms != null && s.status !== "running" ? ` · ${s.duration_ms} ${d.editor.ms}` : ""}
                             </span>
                           </button>
                         ))}
-                        {!run.status && <p className="text-xs text-dim">Иштеткенде ар бир блоктун абалы ушул жерде жана канваста тирүү көрүнөт.</p>}
+                        {!run.status && <p className="text-xs text-dim">{d.editor.runHint}</p>}
                       </div>
                     </div>
                   ) : (
                     <div className="flex flex-col overflow-y-auto p-2" style={{ maxHeight: "calc(45vh - 3rem)" }}>
-                      {history.length === 0 && <p className="p-3 text-sm text-dim">Азырынча иштетүү жок.</p>}
+                      {history.length === 0 && <p className="p-3 text-sm text-dim">{d.editor.noRuns}</p>}
                       {history.map((h) => (
                         <button key={h.id} onClick={() => { show(h.id); setTab("run"); }}
                           className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-raised ${run.executionId === h.id ? "bg-raised" : ""}`}>
@@ -306,7 +309,7 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
                             <StatusDot status={h.status} />
                             <span className="text-xs text-dim">{h.trigger}</span>
                           </span>
-                          <span className="text-xs text-dim">{ago(h.created_at)}</span>
+                          <span className="text-xs text-dim">{ago(h.created_at, d)}</span>
                         </button>
                       ))}
                     </div>
@@ -336,11 +339,11 @@ function Canvas(props: { workflow: Workflow; catalog: Catalog; credentials: Cred
           </div>
 
           <div className="flex items-center justify-between border-t border-line bg-surface px-4 py-1.5 text-xs text-dim">
-            <span>{nodes.length} блок · {edges.length} байланыш{wf.schedule_next_at && wf.is_active ? ` · кийинки иштетүү: ${new Date(wf.schedule_next_at).toLocaleString("ky-KG")}` : ""}</span>
+            <span>{d.editor.stats(nodes.length, edges.length)}{wf.schedule_next_at && wf.is_active ? ` · ${d.editor.next}: ${new Date(wf.schedule_next_at).toLocaleString(d.ago.intl)}` : ""}</span>
             <span className="flex gap-4">
-              <button onClick={() => fitView({ padding: 0.3, duration: 300 })} className="hover:text-fg">Баарын көрсөтүү</button>
-              <form action={deleteWorkflow.bind(null, wf.id)} onSubmit={(e) => { if (!confirm("Бул workflow биротоло өчүрүлөт. Уланталыбы?")) e.preventDefault(); }}>
-                <button className="hover:text-bad">Workflow'ду өчүрүү</button>
+              <button onClick={() => fitView({ padding: 0.3, duration: 300 })} className="hover:text-fg">{d.editor.fit}</button>
+              <form action={deleteWorkflow.bind(null, wf.id)} onSubmit={(e) => { if (!confirm(d.editor.confirmDelete)) e.preventDefault(); }}>
+                <button className="hover:text-bad">{d.editor.deleteWf}</button>
               </form>
             </span>
           </div>

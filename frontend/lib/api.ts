@@ -1,4 +1,5 @@
 import "server-only";
+import { getLocale } from "./locale";
 
 // Server-side base URL (inside Docker: http://api:8000)
 const API_URL = process.env.API_URL ?? "http://localhost:8000";
@@ -16,6 +17,7 @@ export async function api<T>(path: string, { method = "GET", body, token }: Opts
     method,
     cache: "no-store",
     headers: {
+      "Accept-Language": await getLocale(),
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },

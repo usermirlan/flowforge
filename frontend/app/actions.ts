@@ -5,18 +5,28 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { api, ApiError } from "@/lib/api";
 import { getToken, TOKEN_COOKIE } from "@/lib/session";
+import { isLocale, LOCALE_COOKIE } from "@/lib/i18n";
+import { getDict } from "@/lib/locale";
 import type { Credential, Execution, ExecutionDetail, Graph, User, Workflow } from "@/lib/types";
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
-function fail(e: unknown): { ok: false; error: string } {
-  return { ok: false, error: e instanceof ApiError ? e.message : "Сервер жеткиликсиз, кийинчерээк аракет кылыңыз" };
+async function fail(e: unknown): Promise<{ ok: false; error: string }> {
+  return { ok: false, error: e instanceof ApiError ? e.message : (await getDict()).errors.server };
 }
 
 async function token(): Promise<string> {
   const t = await getToken();
   if (!t) redirect("/login");
   return t;
+}
+
+// ---- language ------------------------------------------------------------
+
+export async function setLocale(locale: string) {
+  if (!isLocale(locale)) return;
+  (await cookies()).set(LOCALE_COOKIE, locale, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  revalidatePath("/", "layout");
 }
 
 // ---- auth -----------------------------------------------------------------
@@ -32,7 +42,7 @@ export async function authenticate(_: unknown, form: FormData): Promise<{ error?
   try {
     res = await api(`/api/auth/${mode}`, { method: "POST", body });
   } catch (e) {
-    return { error: fail(e).error };
+    return { error: (await fail(e)).error };
   }
   (await cookies()).set(TOKEN_COOKIE, res.token, {
     httpOnly: true,
@@ -58,7 +68,7 @@ export async function createWorkflow(name: string, graph?: Graph, description = 
     revalidatePath("/workflows");
     return { ok: true, data: wf };
   } catch (e) {
-    return fail(e);
+    return await fail(e);
   }
 }
 
@@ -68,7 +78,7 @@ export async function saveWorkflow(id: string, name: string, description: string
     revalidatePath("/workflows");
     return { ok: true, data: wf };
   } catch (e) {
-    return fail(e);
+    return await fail(e);
   }
 }
 
@@ -84,7 +94,7 @@ export async function setActive(id: string, active: boolean): Promise<Result<Wor
     revalidatePath("/workflows");
     return { ok: true, data: wf };
   } catch (e) {
-    return fail(e);
+    return await fail(e);
   }
 }
 
@@ -95,7 +105,7 @@ export async function runWorkflow(id: string, payload: Record<string, unknown>):
     const { ticket } = await api<{ ticket: string }>(`/api/executions/${execution.id}/ticket`, { method: "POST", token: t });
     return { ok: true, data: { execution, ticket } };
   } catch (e) {
-    return fail(e);
+    return await fail(e);
   }
 }
 
@@ -111,7 +121,7 @@ export async function getExecution(id: string): Promise<Result<ExecutionDetail>>
   try {
     return { ok: true, data: await api<ExecutionDetail>(`/api/executions/${id}`, { token: await token() }) };
   } catch (e) {
-    return fail(e);
+    return await fail(e);
   }
 }
 
@@ -124,7 +134,7 @@ export async function createCredential(_: unknown, form: FormData): Promise<{ er
   try {
     await api<Credential>("/api/credentials", { method: "POST", token: await token(), body: { name: form.get("name"), type, data } });
   } catch (e) {
-    return { error: fail(e).error };
+    return { error: (await fail(e)).error };
   }
   revalidatePath("/credentials");
   return { ok: true };

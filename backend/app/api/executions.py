@@ -14,6 +14,7 @@ from ..engine.nodes import CREDENTIAL_TYPES, catalog
 from ..models import Execution, User
 from ..schemas import ExecutionDetail
 from ..security import create_token, decode_token
+from ..i18n import localize_credentials, t
 
 router = APIRouter(prefix="/api", tags=["executions"])
 
@@ -23,13 +24,13 @@ FINISHED = ("success", "error")
 @router.get("/nodes")
 def nodes():
     """Palette for the editor: node types and the credential forms they need."""
-    return {"nodes": catalog(), "credential_types": CREDENTIAL_TYPES}
+    return {"nodes": catalog(), "credential_types": localize_credentials(CREDENTIAL_TYPES)}
 
 
 def _own_execution(execution_id: str, user: User, db: Session) -> Execution:
     ex = db.get(Execution, execution_id)
     if ex is None or ex.workflow.user_id != user.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Табылган жок")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("Табылган жок"))
     return ex
 
 

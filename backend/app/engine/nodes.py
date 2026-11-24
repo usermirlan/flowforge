@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from ..config import settings
+from ..i18n import t, localize_node
 
 
 class NodeError(Exception):
@@ -53,7 +54,7 @@ def register(cls: type[Node]) -> type[Node]:
 
 
 def catalog() -> list[dict]:
-    return [{"type": t, **n.meta} for t, n in REGISTRY.items()]
+    return [{"type": typ, **localize_node(n.meta, typ)} for typ, n in REGISTRY.items()]
 
 
 # ---------------------------------------------------------------- triggers
@@ -110,17 +111,17 @@ def check_public_url(url: str) -> None:
     """SSRF guard: user workflows must not reach the server's own network."""
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.hostname:
-        raise NodeError("URL http:// же https:// менен башталышы керек")
+        raise NodeError(t("URL http:// же https:// менен башталышы керек"))
     if settings.allow_private_urls:
         return
     try:
         infos = socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80))
     except socket.gaierror as e:
-        raise NodeError(f"Хост табылган жок: {parts.hostname}") from e
+        raise NodeError(t("Хост табылган жок: {host}", host=parts.hostname)) from e
     for info in infos:
         ip = ipaddress.ip_address(info[4][0])
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
-            raise NodeError(f"Ички тармактагы дарекке суроо жиберүүгө болбойт: {parts.hostname}")
+            raise NodeError(t("Ички тармактагы дарекке суроо жиберүүгө болбойт: {host}", host=parts.hostname))
 
 
 def _parse_body(resp: httpx.Response) -> Any:
@@ -156,7 +157,7 @@ class HttpRequest(Node):
         method = str(p.get("method") or "GET").upper()
         headers = p.get("headers") or {}
         if not isinstance(headers, dict):
-            raise NodeError("Headers JSON объект болушу керек")
+            raise NodeError(t("Headers JSON объект болушу керек"))
         body = p.get("body")
         kwargs: dict[str, Any] = {"headers": {str(k): str(v) for k, v in headers.items()}}
         if body not in (None, "") and method != "GET":
@@ -168,7 +169,7 @@ class HttpRequest(Node):
         try:
             resp = client.request(method, url, **kwargs)
         except httpx.HTTPError as e:
-            raise NodeError(f"Суроо ишке ашкан жок: {e}") from e
+            raise NodeError(t("Суроо ишке ашкан жок: {error}", error=e)) from e
         out = {"status": resp.status_code, "headers": dict(resp.headers), "body": _parse_body(resp)}
         if p.get("fail_on_error", True) and resp.status_code >= 400:
             raise NodeError(f"HTTP {resp.status_code}: {str(out['body'])[:300]}")
@@ -190,7 +191,7 @@ def _num(v: Any) -> float:
     try:
         return float(v)
     except (TypeError, ValueError) as e:
-        raise NodeError(f"Сан эмес: {v!r}") from e
+        raise NodeError(t("Сан эмес: {value}", value=repr(v))) from e
 
 
 @register
@@ -211,7 +212,7 @@ class IfCondition(Node):
     def run(self, ctx: NodeContext) -> NodeResult:
         op = ctx.params.get("operator", "equals")
         if op not in OPERATORS:
-            raise NodeError(f"Белгисиз шарт: {op}")
+            raise NodeError(t("Белгисиз шарт: {op}", op=op))
         ok = bool(OPERATORS[op](ctx.params.get("left"), ctx.params.get("right")))
         return NodeResult({"result": ok, "input": ctx.input}, branch="true" if ok else "false")
 
@@ -245,7 +246,7 @@ class SetFields(Node):
     def run(self, ctx: NodeContext) -> NodeResult:
         fields = ctx.params.get("fields") or []
         if not isinstance(fields, list):
-            raise NodeError("Талаалар тизме болушу керек")
+            raise NodeError(t("Талаалар тизме болушу керек"))
         return NodeResult({str(f.get("key")): _coerce(f.get("value")) for f in fields if f.get("key")})
 
 
@@ -266,10 +267,10 @@ class TelegramSend(Node):
     def run(self, ctx: NodeContext) -> NodeResult:
         token = ctx.credentials.get("bot_token")
         if not token:
-            raise NodeError("Telegram бот токени тандалган жок (Credentials)")
+            raise NodeError(t("Telegram бот токени тандалган жок (Credentials)"))
         text = str(ctx.params.get("text") or "").strip()
         if not text:
-            raise NodeError("Билдирүүнүн тексти бош")
+            raise NodeError(t("Билдирүүнүн тексти бош"))
         client = ctx.http or httpx.Client(timeout=20)
         try:
             resp = client.post(
@@ -278,9 +279,9 @@ class TelegramSend(Node):
             )
             data = resp.json()
         except (httpx.HTTPError, ValueError) as e:
-            raise NodeError(f"Telegram'га жетүү мүмкүн болгон жок: {e}") from e
+            raise NodeError(t("Telegram'га жетүү мүмкүн болгон жок: {error}", error=e)) from e
         if not data.get("ok"):
-            raise NodeError(f"Telegram: {data.get('description', 'ката')}")
+            raise NodeError(t("Telegram: {error}", error=data.get("description") or t("ката")))
         return NodeResult({"message_id": data["result"]["message_id"], "chat_id": data["result"]["chat"]["id"]})
 
 
@@ -303,7 +304,7 @@ class AiPrompt(Node):
     def run(self, ctx: NodeContext) -> NodeResult:
         key = ctx.credentials.get("api_key") or settings.llm_api_key
         if not key:
-            raise NodeError("AI ачкычы жок: Credentials'ке кошуңуз же серверде LLM_API_KEY коюңуз")
+            raise NodeError(t("AI ачкычы жок: Credentials'ке кошуңуз же серверде LLM_API_KEY коюңуз"))
         base = (ctx.credentials.get("base_url") or settings.llm_base_url).rstrip("/")
         model = ctx.credentials.get("model") or settings.llm_model
         body: dict[str, Any] = {
@@ -321,13 +322,13 @@ class AiPrompt(Node):
             resp.raise_for_status()
             text = resp.json()["choices"][0]["message"]["content"] or ""
         except (httpx.HTTPError, KeyError, ValueError) as e:
-            raise NodeError(f"AI кызматы жооп берген жок: {e}") from e
+            raise NodeError(t("AI кызматы жооп берген жок: {error}", error=e)) from e
         out: dict[str, Any] = {"text": text, "model": model}
         if ctx.params.get("json_output"):
             try:
                 out["json"] = json.loads(text)
             except ValueError as e:
-                raise NodeError("AI JSON эмес жооп кайтарды") from e
+                raise NodeError(t("AI JSON эмес жооп кайтарды")) from e
         return NodeResult(out)
 
 

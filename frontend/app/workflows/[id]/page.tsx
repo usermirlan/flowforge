@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import Editor from "@/components/editor/Editor";
 import { api, ApiError } from "@/lib/api";
+import { getDict } from "@/lib/locale";
 import { requireToken } from "@/lib/session";
 import type { Catalog, Credential, Workflow } from "@/lib/types";
 
-export const metadata = { title: "Редактор — FlowForge" };
+export async function generateMetadata() {
+  return { title: (await getDict()).meta.editor };
+}
 
 export default async function WorkflowPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -8,13 +8,7 @@ export const GROUP_COLOR: Record<NodeSpec["group"], string> = {
   ai: "var(--color-ai)",
 };
 
-export const GROUP_LABEL: Record<NodeSpec["group"], string> = {
-  trigger: "Триггерлер",
-  action: "Аракеттер",
-  logic: "Логика",
-  data: "Маалымат",
-  ai: "AI",
-};
+export const GROUP_ORDER: NodeSpec["group"][] = ["trigger", "action", "logic", "data", "ai"];
 
 export const TYPE_ICON: Record<string, string> = {
   "trigger.manual": "▶",

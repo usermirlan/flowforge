@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createWorkflow } from "@/app/actions";
-import { TEMPLATES } from "@/lib/templates";
+import { templates } from "@/lib/templates";
+import { useI18n } from "./I18n";
 import type { Graph } from "@/lib/types";
 
 export default function NewWorkflow() {
   const router = useRouter();
+  const { d, locale } = useI18n();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -33,20 +35,20 @@ export default function NewWorkflow() {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Жаңы workflow'дун аты"
-          aria-label="Жаңы workflow'дун аты"
+          placeholder={d.list.newName}
+          aria-label={d.list.newName}
           maxLength={120}
           className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2.5 outline-none focus:border-accent"
         />
         <button disabled={pending || !name.trim()} className="rounded-lg bg-accent px-4 py-2.5 font-medium text-white hover:brightness-110 disabled:opacity-50">
-          + Түзүү
+          {d.list.create}
         </button>
       </form>
       {error && <p role="alert" className="text-sm text-bad">{error}</p>}
       <div>
-        <h2 className="mb-3 text-sm font-medium text-dim">Же даяр үлгүдөн баштаңыз</h2>
+        <h2 className="mb-3 text-sm font-medium text-dim">{d.list.orTemplate}</h2>
         <div className="grid gap-3 md:grid-cols-3">
-          {TEMPLATES.map((t) => (
+          {templates(locale).map((t) => (
             <button
               key={t.name}
               type="button"

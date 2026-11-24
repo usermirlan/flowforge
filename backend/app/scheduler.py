@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from .db import utcnow
 from .engine.graph import GraphError, find_trigger
 from .models import Workflow
+from .i18n import t
 
 
 class ScheduleError(ValueError):
@@ -20,9 +21,9 @@ def next_run(cron: str, tz: str, after: datetime) -> datetime:
     try:
         zone = ZoneInfo(tz)
     except (ZoneInfoNotFoundError, ValueError) as e:
-        raise ScheduleError(f"Белгисиз убакыт алкагы: {tz}") from e
+        raise ScheduleError(t("Белгисиз убакыт алкагы: {tz}", tz=tz)) from e
     if not croniter.is_valid(cron):
-        raise ScheduleError(f"Cron туура эмес: {cron!r}")
+        raise ScheduleError(t("Cron туура эмес: {cron}", cron=repr(cron)))
     return croniter(cron, after.astimezone(zone)).get_next(datetime)
 
 

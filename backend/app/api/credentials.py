@@ -8,6 +8,7 @@ from ..engine.nodes import CREDENTIAL_TYPES
 from ..models import Credential, User
 from ..schemas import CredentialIn, CredentialOut
 from ..security import decrypt_json, encrypt_json
+from ..i18n import t
 
 router = APIRouter(prefix="/api/credentials", tags=["credentials"])
 
@@ -35,12 +36,12 @@ def list_credentials(user: User = Depends(current_user), db: Session = Depends(g
 def create_credential(data: CredentialIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
     spec = CREDENTIAL_TYPES.get(data.type)
     if spec is None:
-        raise HTTPException(422, f"Белгисиз түр: {data.type}")
+        raise HTTPException(422, t("Белгисиз түр: {type}", type=data.type))
     clean = {}
     for f in spec["fields"]:
         v = (data.data.get(f["name"]) or f.get("default") or "").strip()
         if f["secret"] and not v:
-            raise HTTPException(422, f"{f['label']} талап кылынат")
+            raise HTTPException(422, t("{label} талап кылынат", label=f["label"]))
         clean[f["name"]] = v
     cred = Credential(user_id=user.id, name=data.name, type=data.type, data_encrypted=encrypt_json(clean))
     db.add(cred)
@@ -52,6 +53,6 @@ def create_credential(data: CredentialIn, user: User = Depends(current_user), db
 def delete_credential(credential_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
     cred = db.get(Credential, credential_id)
     if cred is None or cred.user_id != user.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Табылган жок")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("Табылган жок"))
     db.delete(cred)
     db.commit()

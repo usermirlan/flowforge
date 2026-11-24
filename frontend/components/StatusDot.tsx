@@ -1,17 +1,16 @@
-const COLORS: Record<string, string> = {
-  success: "bg-ok",
-  error: "bg-bad",
-  running: "bg-accent",
-  queued: "bg-dim",
-};
-const LABELS: Record<string, string> = { success: "Ийгиликтүү", error: "Ката", running: "Иштеп жатат", queued: "Кезекте" };
+"use client";
+
+import { useI18n } from "./I18n";
+
+const COLORS: Record<string, string> = { success: "bg-ok", error: "bg-bad", running: "bg-accent", queued: "bg-dim" };
 
 export default function StatusDot({ status }: { status: string | null }) {
-  if (!status) return <span className="text-xs text-dim">— иштетиле элек</span>;
+  const { d } = useI18n();
+  if (!status) return <span className="text-xs text-dim">{d.status.never}</span>;
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-dim">
       <span className={`h-2 w-2 rounded-full ${COLORS[status] ?? "bg-dim"}`} />
-      {LABELS[status] ?? status}
+      {d.status[status] ?? status}
     </span>
   );
 }

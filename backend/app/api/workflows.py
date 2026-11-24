@@ -11,6 +11,7 @@ from ..models import Execution, User, Workflow
 from ..scheduler import ScheduleError, sync_schedule
 from ..schemas import ActivateIn, ExecutionOut, RunIn, WorkflowIn, WorkflowOut, WorkflowSummary
 from ..services import start_execution
+from ..i18n import t
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
@@ -101,7 +102,7 @@ def activate(data: ActivateIn, wf: Workflow = Depends(own_workflow), db: Session
             raise HTTPException(422, problems[0])
         if trigger_type(wf.graph) == "trigger.manual":
             raise HTTPException(422,
-                                "Кол менен иштетилүүчү workflow'ду активдештирүүнүн кереги жок")
+                                t("Кол менен иштетилүүчү workflow'ду активдештирүүнүн кереги жок"))
     wf.is_active = data.active
     try:
         sync_schedule(wf)

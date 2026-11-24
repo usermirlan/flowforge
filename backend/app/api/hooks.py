@@ -8,6 +8,7 @@ from ..db import get_db
 from ..models import Workflow
 from ..services import start_execution
 from .workflows import trigger_type
+from ..i18n import t
 
 router = APIRouter(prefix="/api/hooks", tags=["webhooks"])
 
@@ -19,10 +20,10 @@ FORWARDED_HEADERS = ("content-type", "user-agent", "x-request-id", "x-github-eve
 async def webhook(token: str, request: Request, db: Session = Depends(get_db)):
     wf = db.scalar(select(Workflow).where(Workflow.webhook_token == token))
     if wf is None or not wf.is_active or trigger_type(wf.graph or {}) != "trigger.webhook":
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Webhook табылган жок же өчүк")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("Webhook табылган жок же өчүк"))
     raw = await request.body()
     if len(raw) > MAX_BODY:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Body өтө чоң")
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, t("Body өтө чоң"))
     try:
         body = json.loads(raw) if raw else {}
     except ValueError:

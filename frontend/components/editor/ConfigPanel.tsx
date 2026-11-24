@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Credential, FlowNodeData, NodeSpec, ParamSpec, Step } from "@/lib/types";
+import { useI18n } from "../I18n";
 
 const base = "rounded-lg border border-line bg-bg px-2.5 py-2 text-sm outline-none focus:border-accent";
 const input = `w-full ${base}`;
@@ -10,6 +11,7 @@ const input = `w-full ${base}`;
 function JsonField({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) {
   const [text, setText] = useState(() => (value == null ? "" : JSON.stringify(value, null, 2)));
   const [err, setErr] = useState<string | null>(null);
+  const { d } = useI18n();
   return (
     <>
       <textarea
@@ -20,7 +22,7 @@ function JsonField({ value, onChange }: { value: unknown; onChange: (v: unknown)
         onBlur={() => {
           if (!text.trim()) { setErr(null); onChange(null); return; }
           try { onChange(JSON.parse(text)); setErr(null); }
-          catch { setErr("JSON туура эмес"); }
+          catch { setErr(d.panel.badJson); }
         }}
         className={`${input} font-mono text-xs`}
       />
@@ -31,18 +33,19 @@ function JsonField({ value, onChange }: { value: unknown; onChange: (v: unknown)
 
 function FieldsField({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) {
   const rows = (Array.isArray(value) ? value : []) as { key: string; value: string }[];
+  const { d } = useI18n();
   const set = (i: number, k: "key" | "value", v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   return (
     <div className="flex flex-col gap-2">
       {rows.map((r, i) => (
         <div key={i} className="flex gap-1.5">
-          <input aria-label="Ачкыч" value={r.key} onChange={(e) => set(i, "key", e.target.value)} placeholder="key" className={`${base} w-24 shrink-0 font-mono text-xs`} />
-          <input aria-label="Маани" value={r.value} onChange={(e) => set(i, "value", e.target.value)} placeholder="{{ … }}" className={`${base} min-w-0 flex-1 font-mono text-xs`} />
-          <button type="button" aria-label="Өчүрүү" onClick={() => onChange(rows.filter((_, j) => j !== i))} className="px-1.5 text-dim hover:text-bad">✕</button>
+          <input aria-label={d.panel.key} value={r.key} onChange={(e) => set(i, "key", e.target.value)} placeholder="key" className={`${base} w-24 shrink-0 font-mono text-xs`} />
+          <input aria-label={d.panel.value} value={r.value} onChange={(e) => set(i, "value", e.target.value)} placeholder="{{ … }}" className={`${base} min-w-0 flex-1 font-mono text-xs`} />
+          <button type="button" aria-label={d.panel.remove} onClick={() => onChange(rows.filter((_, j) => j !== i))} className="px-1.5 text-dim hover:text-bad">✕</button>
         </div>
       ))}
       <button type="button" onClick={() => onChange([...rows, { key: "", value: "" }])} className="self-start text-xs text-accent hover:underline">
-        + талаа кошуу
+        {d.panel.addField}
       </button>
     </div>
   );
@@ -101,6 +104,7 @@ export default function ConfigPanel(props: {
 }) {
   const { nodeId, type, data, spec, upstream, credentials, webhookUrl, step, onChange } = props;
   const [copied, setCopied] = useState<string | null>(null);
+  const { d } = useI18n();
   useEffect(() => setCopied(null), [nodeId]);
 
   const setParam = (name: string, v: unknown) => onChange({ ...data, params: { ...data.params, [name]: v } });
@@ -116,14 +120,14 @@ export default function ConfigPanel(props: {
         <div className="min-w-0">
           <p className="text-xs text-dim">{spec?.label ?? type}</p>
           <input
-            aria-label="Блоктун аты"
+            aria-label={d.panel.nodeName}
             value={data.label}
             onChange={(e) => onChange({ ...data, label: e.target.value })}
             className="mt-0.5 w-full bg-transparent text-base font-semibold outline-none"
           />
           <p className="font-mono text-xs text-dim">{nodeId}</p>
         </div>
-        <button onClick={props.onClose} aria-label="Жабуу" className="rounded p-1 text-dim hover:bg-raised hover:text-fg">✕</button>
+        <button onClick={props.onClose} aria-label={d.editor.close} className="rounded p-1 text-dim hover:bg-raised hover:text-fg">✕</button>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
@@ -131,26 +135,26 @@ export default function ConfigPanel(props: {
 
         {type === "trigger.webhook" && (
           <div className="flex flex-col gap-1.5 text-sm">
-            <span className="text-dim">Webhook URL (POST)</span>
+            <span className="text-dim">{d.panel.webhookUrl}</span>
             <button onClick={() => copy(webhookUrl)} className="break-all rounded-lg border border-line bg-bg p-2.5 text-left font-mono text-xs hover:border-accent">
               {webhookUrl}
             </button>
-            <span className="text-xs text-dim">{copied === webhookUrl ? "Көчүрүлдү ✓" : "Басып көчүрүңүз. Workflow активдүү болгондо гана иштейт."}</span>
+            <span className="text-xs text-dim">{copied === webhookUrl ? d.panel.copied : d.panel.copyHint}</span>
           </div>
         )}
 
         {spec?.credential && (
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-dim">Ачкыч {spec.credential_optional && "(милдеттүү эмес)"}</span>
+            <span className="text-dim">{d.panel.credential} {spec.credential_optional && d.panel.optional}</span>
             <select
               value={data.credentialId ?? ""}
               onChange={(e) => onChange({ ...data, credentialId: e.target.value ? Number(e.target.value) : null })}
               className={input}
             >
-              <option value="">{spec.credential_optional ? "Сервердин ачкычы" : "— тандаңыз —"}</option>
+              <option value="">{spec.credential_optional ? d.panel.serverKey : d.panel.choose}</option>
               {creds.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <Link href="/credentials" className="text-xs text-accent hover:underline">+ жаңы ачкыч кошуу</Link>
+            <Link href="/credentials" className="text-xs text-accent hover:underline">{d.panel.addCredential}</Link>
           </label>
         )}
 
@@ -159,12 +163,12 @@ export default function ConfigPanel(props: {
         {!type.startsWith("trigger.") && (
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={Boolean(data.continueOnError)} onChange={(e) => onChange({ ...data, continueOnError: e.target.checked })} className="accent-[var(--color-accent)]" />
-            Ката болсо да улантуу
+            {d.panel.continueOnError}
           </label>
         )}
 
         <div className="rounded-lg border border-line bg-bg p-3 text-xs">
-          <p className="mb-2 font-medium text-dim">Өзгөрмөлөр (басып көчүрүңүз)</p>
+          <p className="mb-2 font-medium text-dim">{d.panel.vars}</p>
           <div className="flex flex-wrap gap-1.5">
             {["{{ trigger }}", "{{ input }}", ...upstream.map((u) => `{{ nodes.${u} }}`)].map((v) => (
               <button key={v} onClick={() => copy(v)} className={`rounded border px-1.5 py-0.5 font-mono ${copied === v ? "border-ok text-ok" : "border-line hover:border-accent"}`}>
@@ -172,12 +176,12 @@ export default function ConfigPanel(props: {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-dim">Ичкери кирүү: <code className="font-mono">{"{{ nodes.http_1.body.items[0].name }}"}</code></p>
+          <p className="mt-2 text-dim">{d.panel.nested} <code className="font-mono">{"{{ nodes.http_1.body.items[0].name }}"}</code></p>
         </div>
 
         {step && (
           <div className="flex flex-col gap-1.5 text-sm">
-            <span className="text-dim">Акыркы натыйжа</span>
+            <span className="text-dim">{d.panel.lastResult}</span>
             {step.error && <p className="rounded-lg border border-bad/40 bg-bad/10 p-2.5 text-xs text-bad">{step.error}</p>}
             {step.output !== undefined && step.output !== null && (
               <pre className="max-h-72 overflow-auto rounded-lg border border-line bg-bg p-2.5 font-mono text-[11px] leading-relaxed">
@@ -189,7 +193,7 @@ export default function ConfigPanel(props: {
       </div>
 
       <div className="border-t border-line p-3">
-        <button onClick={props.onDelete} className="w-full rounded-lg border border-line py-2 text-sm text-bad hover:bg-bad/10">Блокту өчүрүү</button>
+        <button onClick={props.onDelete} className="w-full rounded-lg border border-line py-2 text-sm text-bad hover:bg-bad/10">{d.panel.deleteNode}</button>
       </div>
     </aside>
   );

@@ -18,6 +18,7 @@ from . import events
 from .graph import find_trigger, nodes_by_id, outgoing
 from .nodes import REGISTRY, NodeContext, NodeError
 from .templating import TemplateRenderError, render_value
+from ..i18n import lang_var, t
 
 MAX_OUTPUT_BYTES = 64_000
 
@@ -47,6 +48,7 @@ def run_execution(
     nodes = nodes_by_id(graph)
     out_edges = outgoing(graph)
     user_id = ex.workflow.user_id
+    lang_token = lang_var.set(ex.workflow.owner.lang or "ky")
 
     ex.status, ex.started_at = "running", utcnow()
     db.commit()
@@ -64,7 +66,7 @@ def run_execution(
                 continue
             done.add(node_id)
             if len(done) > settings.max_steps:
-                raise NodeError(f"Кадамдар {settings.max_steps}дөн ашты")
+                raise NodeError(t("Кадамдар {max}дөн ашты", max=settings.max_steps))
             node = nodes[node_id]
             data = node.get("data") or {}
             position += 1
@@ -97,6 +99,7 @@ def run_execution(
     ex.finished_at = utcnow()
     db.commit()
     publish(ex.id, {"type": "execution", "status": ex.status, "error": ex.error})
+    lang_var.reset(lang_token)
     return ex
 
 
@@ -105,7 +108,7 @@ def _credential(db: Session, user_id: int, credential_id: Any) -> dict:
         return {}
     cred = db.get(Credential, int(credential_id))
     if cred is None or cred.user_id != user_id:
-        raise NodeError("Тандалган credential табылган жок")
+        raise NodeError(t("Тандалган credential табылган жок"))
     return decrypt_json(cred.data_encrypted)
 
 

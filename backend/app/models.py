@@ -19,6 +19,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(80))
     password_hash: Mapped[str] = mapped_column(String(100))
+    # UI language; used for messages produced in the background (webhooks, schedules)
+    lang: Mapped[str] = mapped_column(String(5), default="ky", server_default="ky")
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     workflows: Mapped[list["Workflow"]] = relationship(back_populates="owner", cascade="all, delete-orphan")

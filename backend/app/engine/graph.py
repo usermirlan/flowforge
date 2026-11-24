@@ -1,6 +1,7 @@
 """Workflow graph helpers: validation and traversal."""
 
 from collections import defaultdict
+from ..i18n import t
 
 TRIGGER_PREFIX = "trigger."
 
@@ -23,9 +24,9 @@ def outgoing(graph: dict) -> dict[str, list[dict]]:
 def find_trigger(graph: dict) -> dict:
     triggers = [n for n in graph.get("nodes", []) if n.get("type", "").startswith(TRIGGER_PREFIX)]
     if not triggers:
-        raise GraphError("Workflow'до триггер жок")
+        raise GraphError(t("Workflow'до триггер жок"))
     if len(triggers) > 1:
-        raise GraphError("Workflow'до бир гана триггер болушу керек")
+        raise GraphError(t("Workflow'до бир гана триггер болушу керек"))
     return triggers[0]
 
 
@@ -35,18 +36,18 @@ def validate(graph: dict, known_types: set[str]) -> list[str]:
     nodes = nodes_by_id(graph)
     for n in graph.get("nodes", []):
         if n.get("type") not in known_types:
-            problems.append(f"Белгисиз блок: {n.get('type')!r} ({n.get('id')})")
+            problems.append(t("Белгисиз блок: {type} ({id})", type=repr(n.get("type")), id=n.get("id")))
     for e in graph.get("edges", []):
         if e.get("source") not in nodes or e.get("target") not in nodes:
-            problems.append(f"Туташуу жок блокко барат: {e.get('id')}")
+            problems.append(t("Туташуу жок блокко барат: {id}", id=e.get("id")))
         elif nodes[e["target"]]["type"].startswith(TRIGGER_PREFIX):
-            problems.append("Триггерге эч нерсе туташпашы керек")
+            problems.append(t("Триггерге эч нерсе туташпашы керек"))
     try:
         find_trigger(graph)
     except GraphError as e:
         problems.append(str(e))
     if _has_cycle(graph):
-        problems.append("Workflow'до цикл бар (блоктор айланып бири-бирине кайтат)")
+        problems.append(t("Workflow'до цикл бар (блоктор айланып бири-бирине кайтат)"))
     return problems
 
 
@@ -57,8 +58,8 @@ def _has_cycle(graph: dict) -> bool:
     def visit(nid: str) -> bool:
         state[nid] = 1
         for e in out.get(nid, []):
-            t = e["target"]
-            if state.get(t) == 1 or (t not in state and visit(t)):
+            tgt = e["target"]
+            if state.get(tgt) == 1 or (tgt not in state and visit(tgt)):
                 return True
         state[nid] = 2
         return False
