@@ -1,0 +1,66 @@
+# Local stack: docker compose up --build  →  http://localhost:3000
+x-backend: &backend
+  build: ./backend
+  env_file:
+    - path: .env
+      required: false
+  depends_on:
+    db: { condition: service_healthy }
+    redis: { condition: service_started }
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: flowforge
+      POSTGRES_PASSWORD: flowforge
+      POSTGRES_DB: flowforge
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowforge"]
+      interval: 3s
+      retries: 20
+    ports: ["5433:5432"]
+
+  redis:
+    image: redis:7-alpine
+
+  api:
+    <<: *backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://flowforge:flowforge@db:5432/flowforge
+      REDIS_URL: redis://redis:6379/0
+      PUBLIC_API_URL: http://localhost:8000
+      CORS_ORIGINS: http://localhost:3000
+      ROLE: api
+    ports: ["8000:8000"]
+
+  worker:
+    <<: *backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://flowforge:flowforge@db:5432/flowforge
+      REDIS_URL: redis://redis:6379/0
+      PUBLIC_API_URL: http://localhost:8000
+      ROLE: worker
+    depends_on: [api]
+
+  beat:
+    <<: *backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://flowforge:flowforge@db:5432/flowforge
+      REDIS_URL: redis://redis:6379/0
+      ROLE: beat
+    depends_on: [api]
+
+  web:
+    build: ./frontend
+    environment:
+      API_URL: http://api:8000
+      PUBLIC_API_URL: http://localhost:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  pgdata:

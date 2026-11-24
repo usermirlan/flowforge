@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0b0f;
+  --color-surface: #111318;
+  --color-raised: #171a21;
+  --color-line: #232733;
+  --color-fg: #e7e9ee;
+  --color-dim: #9198a7;
+  --color-accent: #7c6cff;
+  --color-trigger: #f5a524;
+  --color-action: #3b9eff;
+  --color-logic: #a87bff;
+  --color-data: #2fbf9b;
+  --color-ai: #ff6ba8;
+  --color-ok: #3ccf91;
+  --color-bad: #ff5d5d;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+}
+
+html { color-scheme: dark; }
+body { background: var(--color-bg); color: var(--color-fg); }
+
+/* subtle dotted backdrop for marketing sections */
+.dots {
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.07) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+/* React Flow, themed */
+.react-flow { --xy-background-color: var(--color-bg); }
+.react-flow__attribution { display: none; }
+.react-flow__controls { box-shadow: none !important; border: 1px solid var(--color-line); border-radius: 10px; overflow: hidden; }
+.react-flow__controls-button { background: var(--color-surface) !important; border-bottom: 1px solid var(--color-line) !important; fill: var(--color-fg) !important; }
+.react-flow__controls-button:hover { background: var(--color-raised) !important; }
+.react-flow__edge-path { stroke: #3a4050; stroke-width: 2; }
+.react-flow__edge.selected .react-flow__edge-path { stroke: var(--color-accent); }
+.react-flow__edge.animated .react-flow__edge-path { stroke: var(--color-accent); }
+.react-flow__handle { width: 10px; height: 10px; background: var(--color-raised); border: 2px solid #4b5263; }
+.react-flow__handle:hover { border-color: var(--color-accent); }
+.react-flow__minimap { background: var(--color-surface) !important; border: 1px solid var(--color-line); border-radius: 10px; }
+
+@keyframes pulse-ring { 0%,100% { box-shadow: 0 0 0 0 rgba(124,108,255,.45); } 50% { box-shadow: 0 0 0 6px rgba(124,108,255,0); } }
+.node-running { animation: pulse-ring 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .node-running { animation: none; } }
